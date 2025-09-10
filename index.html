@@ -142,7 +142,6 @@
       <h2>Admin Dashboard</h2>
       <button style="float:right; background:#b53939; color:#fff;" onclick="logout()">Logout</button>
 
-      <!-- Toggle Total Students -->
       <div class="toggle-header" onclick="toggleSection('totalStudentsSection', this)">
         <span>Total Registered Students</span><span id="totalStudentsToggle">▶</span>
       </div>
@@ -150,7 +149,6 @@
         <p><strong><span id="totalStudents">0</span></strong> registered</p>
       </div>
 
-      <!-- Toggle Total Announcements -->
       <div class="toggle-header" onclick="toggleSection('totalAnnouncementsSection', this)">
         <span>Total Announcements</span><span id="totalAnnouncementsToggle">▶</span>
       </div>
@@ -160,7 +158,6 @@
 
       <hr style="margin:20px 0; border:none; border-top:1px solid #ccc;">
 
-      <!-- Registered Students -->
       <div class="toggle-header" onclick="toggleSection('studentsListSection', this)">
         <span>Registered Students</span><span id="studentsListToggle">▶</span>
       </div>
@@ -168,7 +165,6 @@
         <ul id="studentList"></ul>
       </div>
 
-      <!-- Announcements -->
       <div class="toggle-header" onclick="toggleSection('announcementsSection', this)">
         <span>Announcements</span><span id="announcementsToggle">▶</span>
       </div>
@@ -181,7 +177,6 @@
         <ul id="announcementList"></ul>
       </div>
 
-      <!-- Custom Form Fields -->
       <div class="toggle-header" onclick="toggleSection('customFieldsSection', this)">
         <span>Custom Form Fields</span><span id="customFieldsToggle">▶</span>
       </div>
@@ -193,7 +188,6 @@
         <button style="margin-top:15px; background:#b53939; color:#fff;" onclick="clearCustomForm()">Clear All Fields & Submissions</button>
       </div>
 
-      <!-- Submitted Student Forms -->
       <h3 style="margin-top:25px;">Submitted Student Forms</h3>
       <ul id="submittedFormList"></ul>
     </section>
@@ -222,11 +216,17 @@
       <div id="stuLoginMessage" class="message hidden"></div>
     </section>
 
-    <!-- Student Custom Form -->
+    <!-- Student Custom Form + Announcements -->
     <section id="studentCustomFormSection" class="section hidden">
-      <h2>Student Custom Form</h2>
+      <h2>Student Dashboard</h2>
+
+      <h3>Announcements</h3>
+      <ul id="studentAnnouncements"></ul>
+
+      <h3>Custom Form</h3>
       <p>Fill out the custom form fields below:</p>
       <form id="studentCustomForm" onsubmit="submitStudentForm(event)"></form>
+
       <button onclick="logout()">Logout</button>
       <div id="formMessage" class="message hidden"></div>
     </section>
@@ -249,14 +249,17 @@
       const sections = ['roleSection','adminLogin','adminDashboard','studentRegister','studentLogin','studentCustomFormSection'];
       sections.forEach(s => document.getElementById(s).classList.toggle('hidden', s !== id));
       clearMessages();
-      id === 'adminDashboard' && loadAdminDashboard();
-      id === 'studentCustomFormSection' && renderStudentForm();
+      if (id === 'adminDashboard') loadAdminDashboard();
+      if (id === 'studentCustomFormSection') {
+        renderStudentForm();
+        renderStudentAnnouncements();
+      }
     }
 
     function clearMessages() {
       ['regMessage','stuLoginMessage','formMessage'].forEach(id => {
         const el = document.getElementById(id);
-        el && (el.classList.add('hidden'), el.textContent = '');
+        if (el) { el.classList.add('hidden'); el.textContent = ''; }
       });
     }
 
@@ -265,16 +268,18 @@
       const u = document.getElementById('adminUsername').value.trim();
       const p = document.getElementById('adminPassword').value.trim();
       if (u === ADMIN_USERNAME && p === ADMIN_PASSWORD) {
-        loggedInUser = {role: 'admin'};
+        loggedInUser = { role: 'admin' };
         showSection('adminDashboard');
-      } else alert('Invalid credentials');
+      } else {
+        alert('Invalid credentials');
+      }
     }
 
     function loadAdminDashboard() {
       document.getElementById('totalStudents').textContent = students.length;
       document.getElementById('totalAnnouncements').textContent = announcements.length;
 
-      // Registered students list
+      // Students list
       const stuList = document.getElementById('studentList');
       stuList.innerHTML = '';
       students.forEach((s,i) => {
@@ -287,16 +292,22 @@
         stuList.appendChild(li);
       });
 
-      // Announcements list
+      // Announcements list (admin)
       const annList = document.getElementById('announcementList');
       annList.innerHTML = '';
       announcements.forEach((a,i) => {
         const li = document.createElement('li');
         li.textContent = `${a.title}: ${a.message} `;
         const del = document.createElement('button');
-        del.textContent = 'Delete'; del.className = 'action-btn';
-        del.onclick = () => (announcements.splice(i,1), saveAll(), loadAdminDashboard());
-        li.appendChild(del); annList.appendChild(li);
+        del.textContent = 'Delete';
+        del.className = 'action-btn';
+        del.onclick = () => {
+          announcements.splice(i,1);
+          saveAll();
+          loadAdminDashboard();
+        };
+        li.appendChild(del);
+        annList.appendChild(li);
       });
 
       // Custom fields list
@@ -306,9 +317,15 @@
         const li = document.createElement('li');
         li.textContent = f;
         const del = document.createElement('button');
-        del.textContent = 'Remove'; del.className = 'action-btn';
-        del.onclick = () => (customFormFields.splice(i,1), saveAll(), loadAdminDashboard());
-        li.appendChild(del); cfList.appendChild(li);
+        del.textContent = 'Remove';
+        del.className = 'action-btn';
+        del.onclick = () => {
+          customFormFields.splice(i,1);
+          saveAll();
+          loadAdminDashboard();
+        };
+        li.appendChild(del);
+        cfList.appendChild(li);
       });
 
       // Submitted forms list
@@ -323,8 +340,13 @@
           span.onclick = () => toggleSubmittedDetails(i, li);
           li.appendChild(span);
           const del = document.createElement('button');
-          del.textContent = 'Delete'; del.className = 'action-btn';
-          del.onclick = () => (delete s.formData, saveAll(), loadAdminDashboard());
+          del.textContent = 'Delete';
+          del.className = 'action-btn';
+          del.onclick = () => {
+            delete s.formData;
+            saveAll();
+            loadAdminDashboard();
+          };
           li.appendChild(del);
           sfList.appendChild(li);
         }
@@ -340,7 +362,9 @@
       let html = `<p><strong>Username:</strong> ${s.username}</p><p><strong>Password:</strong> ${s.password}</p>`;
       if (s.formData) {
         html += '<p><strong>Form:</strong></p><ul>';
-        Object.entries(s.formData).forEach(([k,v]) => { html += `<li><strong>${k}:</strong> ${v}</li>`; });
+        for (const [k,v] of Object.entries(s.formData)) {
+          html += `<li><strong>${k}:</strong> ${v}</li>`;
+        }
         html += '</ul>';
       } else {
         html += '<p><em>No form submitted.</em></p>';
@@ -356,7 +380,9 @@
       const div = document.createElement('div');
       div.className = 'student-details';
       let html = '<ul>';
-      Object.entries(s.formData).forEach(([k,v]) => { html += `<li><strong>${k}:</strong> ${v}</li>`; });
+      for (const [k,v] of Object.entries(s.formData)) {
+        html += `<li><strong>${k}:</strong> ${v}</li>`;
+      }
       html += '</ul>';
       div.innerHTML = html;
       li.appendChild(div);
@@ -366,10 +392,11 @@
       const t = document.getElementById('announcementTitle').value.trim();
       const m = document.getElementById('announcementMessage').value.trim();
       if (!t || !m) return alert('Fill both fields');
-      announcements.push({title: t, message: m});
+      announcements.push({ title: t, message: m });
       document.getElementById('announcementTitle').value = '';
       document.getElementById('announcementMessage').value = '';
-      saveAll(); loadAdminDashboard();
+      saveAll();
+      loadAdminDashboard();
     }
 
     function addCustomField() {
@@ -378,14 +405,16 @@
       if (customFormFields.includes(f)) return alert('Field exists');
       customFormFields.push(f);
       document.getElementById('customFieldsInput').value = '';
-      saveAll(); loadAdminDashboard();
+      saveAll();
+      loadAdminDashboard();
     }
 
     function clearCustomForm() {
       if (!confirm('Clear all fields and submissions?')) return;
       customFormFields = [];
       students.forEach(s => delete s.formData);
-      saveAll(); loadAdminDashboard();
+      saveAll();
+      loadAdminDashboard();
     }
 
     function studentRegister() {
@@ -403,10 +432,10 @@
         msg.textContent = 'Username exists';
         return;
       }
-      students.push({username: u, password: p});
+      students.push({ username: u, password: p });
+      saveAll();
       document.getElementById('regUsername').value = '';
       document.getElementById('regPassword').value = '';
-      saveAll();
       msg.classList.remove('hidden');
       msg.style.color = 'green';
       msg.textContent = 'Registered — you can now log in';
@@ -423,7 +452,7 @@
         msg.textContent = 'Invalid credentials';
         return;
       }
-      loggedInUser = {username: u};
+      loggedInUser = { username: u };
       showSection('studentCustomFormSection');
     }
 
@@ -441,15 +470,32 @@
         input.name = f; input.type = 'text'; input.required = true;
         const stu = students.find(s => s.username === loggedInUser.username);
         if (stu.formData && stu.formData[f]) input.value = stu.formData[f];
-        form.appendChild(label); form.appendChild(input);
+        form.appendChild(label);
+        form.appendChild(input);
       });
       const sub = document.createElement('button');
-      sub.type = 'submit'; sub.textContent = 'Submit Form';
+      sub.type = 'submit';
+      sub.textContent = 'Submit Form';
       form.appendChild(sub);
     }
 
+    function renderStudentAnnouncements() {
+      const list = document.getElementById('studentAnnouncements');
+      list.innerHTML = '';
+      if (!announcements.length) {
+        list.innerHTML = '<li>No announcements yet</li>';
+        return;
+      }
+      announcements.forEach(a => {
+        const li = document.createElement('li');
+        li.innerHTML = `<strong>${a.title}:</strong> ${a.message}`;
+        list.appendChild(li);
+      });
+    }
+
     function submitStudentForm(e) {
-      e.preventDefault(); clearMessages();
+      e.preventDefault();
+      clearMessages();
       const vals = {};
       const form = e.target;
       customFormFields.forEach(f => {
